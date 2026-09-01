@@ -1,5 +1,7 @@
 # SubtitleSync Plugin for Jellyfin and Emby
 
+_NOTE: Completely vibe coded with Mistral Vibe Code_
+
 A server-side plugin that automatically detects and corrects out-of-sync subtitles for media files in **Jellyfin** and **Emby**. The synchronization runs **once per media file** (idempotent) and uses a **compatibility abstraction layer** to support both platforms from a single codebase.
 
 ## Features
