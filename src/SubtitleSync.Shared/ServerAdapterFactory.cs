@@ -4,7 +4,7 @@ using SubtitleSync.Shared.Interfaces;
 namespace SubtitleSync.Shared
 {
     /// <summary>
-    /// Factory for creating the appropriate media server adapter based on runtime detection.
+    /// Factory for creating media server adapters based on the running server type.
     /// </summary>
     public static class ServerAdapterFactory
     {
@@ -12,39 +12,51 @@ namespace SubtitleSync.Shared
         private static readonly object _lock = new object();
 
         /// <summary>
-        /// Creates and returns the appropriate adapter for the current media server.
+        /// Gets or creates the media server abstraction instance.
         /// </summary>
-        /// <returns>An instance of IMediaServerAbstraction</returns>
-        /// <exception cref="InvalidOperationException">Thrown when the server type cannot be determined</exception>
-        public static IMediaServerAbstraction Create()
+        public static IMediaServerAbstraction Instance
         {
-            lock (_lock)
+            get
             {
                 if (_instance != null)
                     return _instance;
 
-                // Try to detect Jellyfin
-                if (IsJellyfin())
+                lock (_lock)
                 {
-                    _instance = CreateJellyfinAdapter();
+                    if (_instance != null)
+                        return _instance;
+
+                    // Detect server type from compilation symbols
+#if JELLYFIN
+                    _instance = new JellyfinAdapter();
+#elif EMBY
+                    _instance = new EmbyAdapter();
+#else
+                    throw new InvalidOperationException("No media server type defined. Please compile with JELLYFIN or EMBY symbol.");
+#endif
+
                     return _instance;
                 }
-
-                // Try to detect Emby
-                if (IsEmby())
-                {
-                    _instance = CreateEmbyAdapter();
-                    return _instance;
-                }
-
-                throw new InvalidOperationException(
-                    "Cannot determine media server type. " +
-                    "Ensure this plugin is running within Jellyfin or Emby server.");
             }
         }
 
         /// <summary>
-        /// Resets the factory instance (useful for testing)
+        /// Initializes the factory with a specific adapter instance.
+        /// </summary>
+        /// <param name="adapter">The adapter instance.</param>
+        public static void Initialize(IMediaServerAbstraction adapter)
+        {
+            if (adapter == null)
+                throw new ArgumentNullException(nameof(adapter));
+
+            lock (_lock)
+            {
+                _instance = adapter;
+            }
+        }
+
+        /// <summary>
+        /// Resets the factory instance.
         /// </summary>
         public static void Reset()
         {
@@ -55,72 +67,21 @@ namespace SubtitleSync.Shared
         }
 
         /// <summary>
-        /// Sets a custom instance (useful for testing)
+        /// Creates an adapter based on the server type name.
         /// </summary>
-        public static void SetInstance(IMediaServerAbstraction instance)
+        /// <param name="serverType">The server type name (e.g., "Jellyfin", "Emby").</param>
+        /// <returns>An IMediaServerAbstraction instance.</returns>
+        public static IMediaServerAbstraction CreateAdapter(string serverType)
         {
-            lock (_lock)
-            {
-                _instance = instance;
-            }
-        }
+            if (string.IsNullOrWhiteSpace(serverType))
+                throw new ArgumentException("Server type cannot be null or empty.", nameof(serverType));
 
-        private static bool IsJellyfin()
-        {
-            try
+            return serverType switch
             {
-                // Check for Jellyfin-specific types
-                var jellyfinDataType = Type.GetType("Jellyfin.Data.Plugins.Plugin, Jellyfin.Data");
-                var jellyfinModelType = Type.GetType("MediaBrowser.Model.Plugins.PluginInfo, MediaBrowser.Model");
-                
-                // Additional check for Jellyfin's server type
-                var serverType = Type.GetType("Jellyfin.Server.JellyfinServer, Jellyfin.Server");
-                
-                return jellyfinDataType != null || serverType != null;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static bool IsEmby()
-        {
-            try
-            {
-                // Check for Emby-specific types
-                var embyServerType = Type.GetType("MediaBrowser.Server.Plugins.Plugin, Emby.Server");
-                var embyModelType = Type.GetType("MediaBrowser.Model.Plugins.PluginInfo, MediaBrowser.Model");
-                
-                // Additional check for Emby's server type
-                var serverType = Type.GetType("Emby.Server.EmbyServer, Emby.Server");
-                
-                return embyServerType != null || serverType != null;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static IMediaServerAbstraction CreateJellyfinAdapter()
-        {
-#if JELLYFIN
-            return new JellyfinAdapter();
-#else
-            throw new InvalidOperationException(
-                "Jellyfin adapter cannot be created because this assembly was not compiled for Jellyfin.");
-#endif
-        }
-
-        private static IMediaServerAbstraction CreateEmbyAdapter()
-        {
-#if EMBY
-            return new EmbyAdapter();
-#else
-            throw new InvalidOperationException(
-                "Emby adapter cannot be created because this assembly was not compiled for Emby.");
-#endif
+                "Jellyfin" => new JellyfinAdapter(),
+                "Emby" => new EmbyAdapter(),
+                _ => throw new ArgumentException($"Unsupported server type: {serverType}")
+            };
         }
     }
 }

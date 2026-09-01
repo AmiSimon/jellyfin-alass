@@ -3,358 +3,181 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Jellyfin.Data.Entities;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Plugins;
 using Microsoft.Extensions.Logging;
 using SubtitleSync.Shared.Interfaces;
 
 namespace SubtitleSync.Jellyfin
 {
     /// <summary>
-    /// Jellyfin-specific implementation of IMediaServerAbstraction.
+    /// Jellyfin-specific adapter for the SubtitleSync plugin.
     /// </summary>
     public class JellyfinAdapter : IMediaServerAbstraction
     {
-        private readonly Jellyfin.Data.Plugins.Plugin _plugin;
-        private readonly ILogger _logger;
-        private readonly Jellyfin.Data.Plugins.IPluginManager _pluginManager;
-        private readonly MediaBrowser.Common.Plugins.IPluginEntryPoint _entryPoint;
+        private readonly ILogger<JellyfinAdapter> _jellyfinLogger;
+        private readonly ILogger _pluginLogger;
 
         /// <summary>
         /// Initializes a new instance of the JellyfinAdapter class.
         /// </summary>
-        public JellyfinAdapter(
-            Jellyfin.Data.Plugins.Plugin plugin,
-            ILogger logger,
-            Jellyfin.Data.Plugins.IPluginManager pluginManager,
-            MediaBrowser.Common.Plugins.IPluginEntryPoint entryPoint)
+        public JellyfinAdapter()
         {
-            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _pluginManager = pluginManager;
-            _entryPoint = entryPoint;
+            // In Jellyfin plugin context, these would be injected
+            // For now, we'll use a simple implementation
+            _pluginLogger = new JellyfinLoggerAdapter();
         }
 
         /// <summary>
-        /// Gets all media items from the library.
+        /// Gets the name of the media server.
         /// </summary>
-        public async Task<IEnumerable<MediaItem>> GetMediaItemsAsync()
+        public string ServerName => "Jellyfin";
+
+        /// <summary>
+        /// Gets the version of the media server.
+        /// </summary>
+        public string ServerVersion => typeof(BaseItem).Assembly.GetName().Version?.ToString() ?? "Unknown";
+
+        /// <summary>
+        /// Gets the plugin configuration directory path.
+        /// </summary>
+        public string PluginConfigurationDirectory =>
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "jellyfin",
+                "plugins",
+                "SubtitleSync",
+                "config");
+
+        /// <summary>
+        /// Gets the plugin data directory path.
+        /// </summary>
+        public string PluginDataDirectory =>
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "jellyfin",
+                "plugins",
+                "SubtitleSync",
+                "data");
+
+        /// <summary>
+        /// Gets all media items that have subtitle files.
+        /// </summary>
+        /// <returns>A collection of media items with subtitles.</returns>
+        public async Task<IEnumerable<IMediaItem>> GetMediaItemsWithSubtitlesAsync()
         {
-            try
-            {
-                // In Jellyfin, we can access the library through the ApplicationHost
-                var appHost = _plugin.ApplicationHost;
-                if (appHost == null)
-                    return Enumerable.Empty<MediaItem>();
-
-                var libraryManager = appHost.Resolve<Jellyfin.Data.ILibraryManager>();
-                var allItems = libraryManager.GetItems();
-
-                return allItems.Select(item => ConvertToMediaItem(item));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting media items");
-                return Enumerable.Empty<MediaItem>();
-            }
+            // This would be implemented with Jellyfin's repository access
+            // For now, return empty collection
+            return Array.Empty<IMediaItem>();
         }
 
         /// <summary>
-        /// Gets a specific media item by ID.
+        /// Gets the subtitle files for a specific media item.
         /// </summary>
-        public async Task<MediaItem> GetMediaItemAsync(string itemId)
+        /// <param name="mediaItemId">The media item ID.</param>
+        /// <returns>A collection of subtitle file paths.</returns>
+        public async Task<IEnumerable<string>> GetSubtitleFilesAsync(string mediaItemId)
         {
-            try
-            {
-                var appHost = _plugin.ApplicationHost;
-                if (appHost == null)
-                    return null;
-
-                var libraryManager = appHost.Resolve<Jellyfin.Data.ILibraryManager>();
-                var item = libraryManager.GetItemById(new Guid(itemId));
-                
-                if (item == null)
-                    return null;
-
-                return ConvertToMediaItem(item);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting media item {ItemId}", itemId);
-                return null;
-            }
+            // Implementation would use Jellyfin's MediaAttachmentFileRepository
+            return Array.Empty<string>();
         }
 
         /// <summary>
-        /// Gets the media stream for a file.
+        /// Gets the duration of a media item.
         /// </summary>
-        public async Task<Stream> GetMediaStreamAsync(string path)
+        /// <param name="mediaItemId">The media item ID.</param>
+        /// <returns>The media duration.</returns>
+        public async Task<TimeSpan> GetMediaDurationAsync(string mediaItemId)
         {
-            try
-            {
-                var appHost = _plugin.ApplicationHost;
-                if (appHost == null)
-                    throw new InvalidOperationException("ApplicationHost is not available");
-
-                var fileSystem = appHost.Resolve<Jellyfin.IO.IFileSystem>();
-                
-                if (!fileSystem.FileExists(path))
-                    throw new FileNotFoundException("Media file not found", path);
-
-                return await fileSystem.OpenReadAsync(path);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error opening media stream for {Path}", path);
-                throw;
-            }
+            // Implementation would use Jellyfin's repository
+            return TimeSpan.Zero;
         }
 
         /// <summary>
-        /// Gets the subtitle stream for a file.
+        /// Gets the file path for a subtitle.
         /// </summary>
-        public async Task<Stream> GetSubtitleStreamAsync(string path)
+        /// <param name="subtitleId">The subtitle ID.</param>
+        /// <returns>The full file path.</returns>
+        public async Task<string> GetSubtitleFilePathAsync(string subtitleId)
         {
-            try
-            {
-                var appHost = _plugin.ApplicationHost;
-                if (appHost == null)
-                    throw new InvalidOperationException("ApplicationHost is not available");
-
-                var fileSystem = appHost.Resolve<Jellyfin.IO.IFileSystem>();
-                
-                if (!fileSystem.FileExists(path))
-                    throw new FileNotFoundException("Subtitle file not found", path);
-
-                return await fileSystem.OpenReadAsync(path);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error opening subtitle stream for {Path}", path);
-                throw;
-            }
+            // Implementation would resolve the file path
+            return string.Empty;
         }
 
         /// <summary>
-        /// Saves a subtitle file.
+        /// Sends a notification to the user.
         /// </summary>
-        public async Task SaveSubtitleAsync(string path, Stream content)
+        /// <param name="title">The notification title.</param>
+        /// <param name="message">The notification message.</param>
+        public async Task SendNotificationAsync(string title, string message)
         {
-            try
-            {
-                var appHost = _plugin.ApplicationHost;
-                if (appHost == null)
-                    throw new InvalidOperationException("ApplicationHost is not available");
-
-                var fileSystem = appHost.Resolve<Jellyfin.IO.IFileSystem>();
-                
-                using (var fileStream = fileSystem.OpenWriteAsync(path).Result)
-                {
-                    await content.CopyToAsync(fileStream);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error saving subtitle to {Path}", path);
-                throw;
-            }
+            // Implementation would use Jellyfin's notification system
+            _pluginLogger.Info("Notification: {Title} - {Message}", title, message);
         }
 
         /// <summary>
-        /// Gets all subtitle files for a media item.
+        /// Logs a message to the server log.
         /// </summary>
-        public async Task<IEnumerable<SubtitleFile>> GetSubtitleFilesAsync(string itemId)
+        /// <param name="level">The log level.</param>
+        /// <param name="message">The message.</param>
+        /// <param name="args">The arguments.</param>
+        public async Task LogAsync(LogLevel level, string message, params object[] args)
         {
-            try
+            switch (level)
             {
-                var appHost = _plugin.ApplicationHost;
-                if (appHost == null)
-                    return Enumerable.Empty<SubtitleFile>();
-
-                var libraryManager = appHost.Resolve<Jellyfin.Data.ILibraryManager>();
-                var item = libraryManager.GetItemById(new Guid(itemId));
-                
-                if (item == null)
-                    return Enumerable.Empty<SubtitleFile>();
-
-                // Get all media streams for this item
-                var mediaStreams = item.GetMediaStreams();
-                var subtitleStreams = mediaStreams.Where(s => s.Type == MediaBrowser.Model.MediaInfo.MediaStreamType.Subtitle);
-
-                return subtitleStreams.Select(stream => new SubtitleFile
-                {
-                    Id = stream.Index.ToString(),
-                    Path = stream.Path,
-                    Language = stream.Language,
-                    Format = ConvertSubtitleType(stream.Codec),
-                    IsForced = stream.IsForcedSubtitleStream,
-                    IsDefault = stream.IsDefault
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting subtitle files for {ItemId}", itemId);
-                return Enumerable.Empty<SubtitleFile>();
+                case LogLevel.Debug:
+                    _pluginLogger.Debug(message, args);
+                    break;
+                case LogLevel.Info:
+                    _pluginLogger.Info(message, args);
+                    break;
+                case LogLevel.Warning:
+                    _pluginLogger.Warn(message, args);
+                    break;
+                case LogLevel.Error:
+                case LogLevel.Critical:
+                    _pluginLogger.Error(message, args);
+                    break;
             }
         }
+    }
 
-        /// <summary>
-        /// Gets plugin configuration.
-        /// </summary>
-        public async Task<PluginConfiguration> GetConfigurationAsync()
+    /// <summary>
+    /// Adapter for Jellyfin's ILogger to our ILogger interface.
+    /// </summary>
+    internal class JellyfinLoggerAdapter : ILogger
+    {
+        private readonly Microsoft.Extensions.Logging.ILogger _jellyfinLogger;
+
+        public JellyfinLoggerAdapter()
         {
-            try
-            {
-                // In Jellyfin, plugin configuration is stored in the plugin's data directory
-                var config = _plugin.Configuration;
-                
-                // If no configuration exists, return defaults
-                if (config == null)
-                    return new PluginConfiguration();
-
-                // Deserialize configuration
-                // Note: This is simplified - actual implementation would use proper serialization
-                return new PluginConfiguration();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting plugin configuration");
-                return new PluginConfiguration();
-            }
+            // In a real plugin, this would use the injected logger
+            _jellyfinLogger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<JellyfinAdapter>();
         }
 
-        /// <summary>
-        /// Saves plugin configuration.
-        /// </summary>
-        public async Task SaveConfigurationAsync(PluginConfiguration config)
+        public void Debug(string message, params object[] args)
         {
-            try
-            {
-                // In Jellyfin, we update the plugin configuration
-                // This would typically be done through the plugin's Configuration property
-                // and the system would handle persistence
-                
-                // For now, we'll just log that configuration was saved
-                _logger.LogInformation("Plugin configuration saved");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error saving plugin configuration");
-            }
+            _jellyfinLogger.LogDebug(message, args);
         }
 
-        /// <summary>
-        /// Gets the server's logger.
-        /// </summary>
-        public ILogger GetLogger()
+        public void Info(string message, params object[] args)
         {
-            return new JellyfinLogger(_logger);
+            _jellyfinLogger.LogInformation(message, args);
         }
 
-        /// <summary>
-        /// Gets the server version.
-        /// </summary>
-        public string GetServerVersion()
+        public void Warn(string message, params object[] args)
         {
-            try
-            {
-                var appHost = _plugin.ApplicationHost;
-                if (appHost == null)
-                    return "Unknown";
-
-                return appHost.ApplicationVersion.ToString();
-            }
-            catch
-            {
-                return "Unknown";
-            }
+            _jellyfinLogger.LogWarning(message, args);
         }
 
-        /// <summary>
-        /// Gets a service of the specified type.
-        /// </summary>
-        public T GetService<T>() where T : class
+        public void Error(Exception exception, string message, params object[] args)
         {
-            try
-            {
-                var appHost = _plugin.ApplicationHost;
-                if (appHost == null)
-                    throw new InvalidOperationException("ApplicationHost is not available");
-
-                return appHost.Resolve<T>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error resolving service {ServiceType}", typeof(T).Name);
-                throw;
-            }
+            _jellyfinLogger.LogError(exception, message, args);
         }
 
-        private MediaItem ConvertToMediaItem(Jellyfin.Data.Entities.BaseItem item)
+        public void Error(string message, params object[] args)
         {
-            return new MediaItem
-            {
-                Id = item.Id.ToString(),
-                Name = item.Name,
-                Path = item.Path,
-                Duration = item.RunTimeTicks.HasValue ? 
-                    TimeSpan.FromTicks(item.RunTimeTicks.Value) : TimeSpan.Zero,
-                DateCreated = item.DateCreated,
-                DateModified = item.DateModified,
-                Type = ConvertMediaType(item)
-            };
-        }
-
-        private MediaItem.MediaType ConvertMediaType(Jellyfin.Data.Entities.BaseItem item)
-        {
-            if (item is Jellyfin.Data.Entities.Video)
-                return MediaItem.MediaType.Video;
-            if (item is Jellyfin.Data.Entities.Audio)
-                return MediaItem.MediaType.Audio;
-            if (item is Jellyfin.Data.Entities.Photo)
-                return MediaItem.MediaType.Photo;
-            return MediaItem.MediaType.Unknown;
-        }
-
-        private SubtitleFormat ConvertSubtitleType(string codec)
-        {
-            if (string.IsNullOrWhiteSpace(codec))
-                return SubtitleFormat.Unknown;
-
-            var codecLower = codec.ToLowerInvariant();
-            
-            if (codecLower.Contains("srt"))
-                return SubtitleFormat.SRT;
-            if (codecLower.Contains("ass") || codecLower.Contains("ssa"))
-                return SubtitleFormat.ASS;
-            if (codecLower.Contains("vtt") || codecLower.Contains("webvtt"))
-                return SubtitleFormat.WEBVTT;
-            
-            return SubtitleFormat.Unknown;
-        }
-
-        /// <summary>
-        /// Wrapper to convert ILogger to SubtitleSync.Shared.Interfaces.ILogger
-        /// </summary>
-        private class JellyfinLogger : ILogger
-        {
-            private readonly ILogger _logger;
-
-            public JellyfinLogger(ILogger logger)
-            {
-                _logger = logger;
-            }
-
-            public void Debug(string message) => _logger.LogDebug(message);
-            public void Debug(Exception exception, string message) => _logger.LogDebug(exception, message);
-            public void Info(string message) => _logger.LogInformation(message);
-            public void Info(Exception exception, string message) => _logger.LogInformation(exception, message);
-            public void Warn(string message) => _logger.LogWarning(message);
-            public void Warn(Exception exception, string message) => _logger.LogWarning(exception, message);
-            public void Error(string message) => _logger.LogError(message);
-            public void Error(Exception exception, string message) => _logger.LogError(exception, message);
-            public void Fatal(string message) => _logger.LogCritical(message);
-            public void Fatal(Exception exception, string message) => _logger.LogCritical(exception, message);
+            _jellyfinLogger.LogError(message, args);
         }
     }
 }

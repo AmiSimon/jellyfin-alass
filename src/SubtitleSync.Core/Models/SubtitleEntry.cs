@@ -1,58 +1,44 @@
 using System;
+using System.Text;
 
 namespace SubtitleSync.Core.Models
 {
     /// <summary>
     /// Represents a single subtitle entry with timing information.
     /// </summary>
-    public class SubtitleEntry : ICloneable
+    public class SubtitleEntry
     {
         /// <summary>
-        /// The sequence number of this subtitle entry.
+        /// Gets or sets the sequence number of this entry.
         /// </summary>
-        public int Index { get; set; }
+        public int SequenceNumber { get; set; }
 
         /// <summary>
-        /// The start time of this subtitle entry.
+        /// Gets or sets the start time of this subtitle.
         /// </summary>
         public TimeSpan StartTime { get; set; }
 
         /// <summary>
-        /// The end time of this subtitle entry.
+        /// Gets or sets the end time of this subtitle.
         /// </summary>
         public TimeSpan EndTime { get; set; }
 
         /// <summary>
-        /// The text content of this subtitle entry.
+        /// Gets or sets the text content of this subtitle.
         /// </summary>
         public string Text { get; set; } = string.Empty;
 
         /// <summary>
-        /// Additional styling or positioning information (for ASS/SSA formats).
+        /// Gets or sets additional styling or positioning information (for ASS/SSA).
         /// </summary>
-        public string? Style { get; set; }
-
-        /// <summary>
-        /// Creates a deep copy of this subtitle entry.
-        /// </summary>
-        public object Clone()
-        {
-            return new SubtitleEntry
-            {
-                Index = Index,
-                StartTime = StartTime,
-                EndTime = EndTime,
-                Text = Text,
-                Style = Style
-            };
-        }
+        public string Style { get; set; } = string.Empty;
 
         /// <summary>
         /// Returns a string representation of this subtitle entry.
         /// </summary>
         public override string ToString()
         {
-            return $"[{StartTime:hh\:mm\:ss\.fff} --> {EndTime:hh\:mm\:ss\.fff}] {Text}";
+            return $[{{StartTime:hh\:mm\:ss\.fff}} --> {{EndTime:hh\:mm\:ss\.fff}}] {Text}];
         }
 
         /// <summary>
@@ -72,18 +58,18 @@ namespace SubtitleSync.Core.Models
         }
 
         /// <summary>
-        /// Checks if this entry overlaps with another entry.
+        /// Creates a deep copy of this subtitle entry.
         /// </summary>
-        /// <param name="other">The other entry to check against.</param>
-        /// <returns>True if the entries overlap, false otherwise.</returns>
-        public bool OverlapsWith(SubtitleEntry other)
+        public SubtitleEntry Clone()
         {
-            return StartTime < other.EndTime && EndTime > other.StartTime;
+            return new SubtitleEntry
+            {
+                SequenceNumber = SequenceNumber,
+                StartTime = StartTime,
+                EndTime = EndTime,
+                Text = Text,
+                Style = Style
+            };
         }
-
-        /// <summary>
-        /// Gets the duration of this subtitle entry.
-        /// </summary>
-        public TimeSpan Duration => EndTime - StartTime;
     }
 }

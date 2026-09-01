@@ -4,108 +4,71 @@ using System.Collections.Generic;
 namespace SubtitleSync.Core.Models
 {
     /// <summary>
-    /// Represents the result of a subtitle sync analysis.
+    /// Result of analyzing subtitle synchronization.
     /// </summary>
     public class SyncAnalysisResult
     {
         /// <summary>
-        /// Whether the subtitle is out of sync.
+        /// Gets or sets a value indicating whether the subtitles are out of sync.
         /// </summary>
         public bool IsOutOfSync { get; set; }
 
         /// <summary>
-        /// The detected time offset that needs to be applied.
-        /// Positive value means subtitles appear too early (need to be delayed).
-        /// Negative value means subtitles appear too late (need to be moved earlier).
+        /// Gets or sets the detected time offset.
+        /// Positive value means subtitles appear too late.
+        /// Negative value means subtitles appear too early.
         /// </summary>
         public TimeSpan Offset { get; set; }
 
         /// <summary>
-        /// Confidence level of the detection (0.0 to 1.0).
+        /// Gets or sets the confidence level of the detection (0.0 to 1.0).
         /// </summary>
         public double Confidence { get; set; }
 
         /// <summary>
-        /// The detection method used.
+        /// Gets or sets the method used for detection.
         /// </summary>
-        public SyncDetectionMethod Method { get; set; } = SyncDetectionMethod.Unknown;
+        public SyncDetectionMethod DetectionMethod { get; set; }
 
         /// <summary>
-        /// Additional details about the analysis.
+        /// Gets or sets the original subtitle entries (before correction).
         /// </summary>
-        public string? Details { get; set; }
+        public IEnumerable<SubtitleEntry> OriginalEntries { get; set; } = Array.Empty<SubtitleEntry>();
 
         /// <summary>
-        /// List of individual entry analyses (for detailed reporting).
+        /// Gets or sets the corrected subtitle entries.
         /// </summary>
-        public List<EntryAnalysis> EntryAnalyses { get; set; } = new List<EntryAnalysis>();
+        public IEnumerable<SubtitleEntry> CorrectedEntries { get; set; } = Array.Empty<SubtitleEntry>();
 
         /// <summary>
-        /// The media duration used for analysis.
+        /// Gets or sets any error message from the analysis.
         /// </summary>
-        public TimeSpan MediaDuration { get; set; }
-
-        /// <summary>
-        /// The number of subtitle entries analyzed.
-        /// </summary>
-        public int EntriesAnalyzed { get; set; }
-
-        /// <summary>
-        /// Returns a string representation of this analysis result.
-        /// </summary>
-        public override string ToString()
-        {
-            return $"SyncAnalysis: OutOfSync={IsOutOfSync}, Offset={Offset.TotalMilliseconds:F2}ms, " +
-                   $"Confidence={Confidence:P2}, Method={Method}, Entries={EntriesAnalyzed}";
-        }
+        public string ErrorMessage { get; set; } = string.Empty;
     }
 
     /// <summary>
-    /// Analysis result for a single subtitle entry.
-    /// </summary>
-    public class EntryAnalysis
-    {
-        /// <summary>
-        /// The index of the entry.
-        /// </summary>
-        public int EntryIndex { get; set; }
-
-        /// <summary>
-        /// The expected start time.
-        /// </summary>
-        public TimeSpan ExpectedStartTime { get; set; }
-
-        /// <summary>
-        /// The actual start time.
-        /// </summary>
-        public TimeSpan ActualStartTime { get; set; }
-
-        /// <summary>
-        /// The calculated offset for this entry.
-        /// </summary>
-        public TimeSpan Offset { get; set; }
-
-        /// <summary>
-        /// Whether this entry is out of sync.
-        /// </summary>
-        public bool IsOutOfSync { get; set; }
-
-        /// <summary>
-        /// The confidence for this specific entry.
-        /// </summary>
-        public double Confidence { get; set; }
-    }
-
-    /// <summary>
-    /// Methods used for sync detection.
+    /// Methods for detecting subtitle synchronization issues.
     /// </summary>
     public enum SyncDetectionMethod
     {
-        Unknown,
+        /// <summary>
+        /// Detect based on the first subtitle's timing.
+        /// </summary>
         FirstSubtitle,
+
+        /// <summary>
+        /// Detect based on content matching with known patterns.
+        /// </summary>
         ContentMatching,
+
+        /// <summary>
+        /// Detect based on scene changes.
+        /// </summary>
         SceneDetection,
-        ManualOffset,
-        ReferenceFile
+
+        /// <summary>
+        /// Manual detection.
+        /// </summary>
+        Manual
     }
 }

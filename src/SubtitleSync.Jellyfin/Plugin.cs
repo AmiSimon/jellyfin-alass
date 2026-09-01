@@ -1,104 +1,79 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using Jellyfin.Data.Plugins;
+using Jellyfin.Plugins;
 using MediaBrowser.Common.Plugins;
-using Microsoft.Extensions.Logging;
-using SubtitleSync.Core.Services;
-using SubtitleSync.Jellyfin;
-using SubtitleSync.Shared.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SubtitleSync.Jellyfin
 {
     /// <summary>
-    /// Main plugin class for Jellyfin.
+    /// Main plugin entry point for Jellyfin.
     /// </summary>
-    [Plugin("SubtitleSync", "1.0.0", "Automatically synchronizes out-of-sync subtitles", typeof(PluginConfiguration))]
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     {
-        private readonly ILogger _logger;
-        private readonly IPluginManager _pluginManager;
-        private SubtitleSyncService? _syncService;
-        private JellyfinAdapter? _adapter;
+        /// <summary>
+        /// Gets the plugin name.
+        /// </summary>
+        public override string Name => "SubtitleSync";
+
+        /// <summary>
+        /// Gets the plugin description.
+        /// </summary>
+        public override string Description => "Automatically synchronizes out-of-sync subtitles for media files.";
+
+        /// <summary>
+        /// Gets the plugin version.
+        /// </summary>
+        public override Guid Id => Guid.Parse("A1B2C3D4-E5F6-7890-G1H2-I3J4K5L6M7N8");
+
+        /// <summary>
+        /// Gets the plugin category.
+        /// </summary>
+        public override string Category => "Subtitles";
+
+        /// <summary>
+        /// Gets the plugin target version.
+        /// </summary>
+        public override string TargetAbi => PluginTargetAbi.Jellyfin10_8_0;
 
         /// <summary>
         /// Gets the plugin instance.
         /// </summary>
-        public static Plugin? Instance { get; private set; }
+        public static Plugin Instance { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the Plugin class.
         /// </summary>
         /// <param name="applicationPaths">The application paths.</param>
-        /// <param name="logger">The logger.</param>
         /// <param name="pluginManager">The plugin manager.</param>
-        public Plugin(
-            IApplicationPaths applicationPaths,
-            ILogger logger,
-            IPluginManager pluginManager)
-            : base(applicationPaths, logger)
+        public Plugin(IApplicationPaths applicationPaths, IPluginManager pluginManager)
+            : base(applicationPaths, pluginManager)
         {
-            _logger = logger;
-            _pluginManager = pluginManager;
             Instance = this;
         }
 
         /// <summary>
-        /// Runs the plugin.
+        /// Called when the plugin is loaded.
         /// </summary>
-        public override async Task<bool> RunAsync()
+        public override void OnStartup()
         {
-            try
-            {
-                _logger.LogInformation("SubtitleSync plugin starting...");
+            base.OnStartup();
 
-                // Create the adapter
-                _adapter = new JellyfinAdapter(this, _logger, _pluginManager, this);
-
-                // Initialize the sync service
-                _syncService = new SubtitleSyncService(_adapter);
-                await _syncService.InitializeAsync();
-
-                // Register event handlers
-                RegisterEventHandlers();
-
-                _logger.LogInformation("SubtitleSync plugin started successfully");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error starting SubtitleSync plugin");
-                return false;
-            }
+            // Register services
+            // Note: In Jellyfin 10.8+, plugin services are registered differently
+            // This would be handled through the plugin's service registrar
         }
 
         /// <summary>
-        /// Registers event handlers for media changes.
+        /// Called when the plugin is unloading.
         /// </summary>
-        private void RegisterEventHandlers()
+        public override void OnShutdown()
         {
-            if (ApplicationHost == null)
-                return;
-
-            try
-            {
-                var libraryManager = ApplicationHost.Resolve<Jellyfin.Data.ILibraryManager>();
-                
-                // Note: Jellyfin uses different event patterns
-                // We'll use the ItemAdded and ItemUpdated events
-                // In actual Jellyfin, these might be accessed differently
-                
-                _logger.LogInformation("Event handlers registered");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error registering event handlers");
-            }
+            base.OnShutdown();
         }
 
         /// <summary>
-        /// Gets the plugin pages for the web interface.
+        /// Gets the web pages for the plugin configuration UI.
         /// </summary>
         public IEnumerable<PluginPageInfo> GetPages()
         {
@@ -106,92 +81,51 @@ namespace SubtitleSync.Jellyfin
             {
                 new PluginPageInfo
                 {
-                    Name = "SubtitleSync",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.config.html"
+                    Name = Name,
+                    EmbeddedResourcePath = $"{GetType().Namespace}.Configuration.config.html"
                 }
             };
-        }
-
-        /// <summary>
-        /// Processes a media item when it's added or updated.
-        /// </summary>
-        /// <param name="itemId">The ID of the media item.</param>
-        public async Task ProcessMediaItemAsync(string itemId)
-        {
-            if (_syncService != null)
-            {
-                await _syncService.ProcessMediaItemAsync(itemId);
-            }
-        }
-
-        /// <summary>
-        /// Gets the sync service.
-        /// </summary>
-        public SubtitleSyncService? GetSyncService() => _syncService;
-
-        /// <summary>
-        /// Gets the adapter.
-        /// </summary>
-        public JellyfinAdapter? GetAdapter() => _adapter;
-
-        /// <summary>
-        /// Disposes the plugin.
-        /// </summary>
-        /// <param name="disposing">Whether to dispose managed resources.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _syncService?.Dispose();
-                _syncService = null;
-            }
-            base.Dispose(disposing);
         }
     }
 
     /// <summary>
-    /// Plugin configuration for Jellyfin.
+    /// Plugin configuration.
     /// </summary>
     public class PluginConfiguration : BasePluginConfiguration
     {
         /// <summary>
-        /// Enable/disable automatic sync.
+        /// Gets or sets a value indicating whether auto sync is enabled.
         /// </summary>
         public bool EnableAutoSync { get; set; } = true;
 
         /// <summary>
-        /// Minimum confidence threshold for auto-correction (0.0 to 1.0).
+        /// Gets or sets the minimum confidence threshold for auto-correction (0.0-1.0).
         /// </summary>
         public double MinConfidenceThreshold { get; set; } = 0.9;
 
         /// <summary>
-        /// Maximum allowed offset before correction (milliseconds).
+        /// Gets or sets the maximum allowed offset in milliseconds.
         /// </summary>
         public int MaxAllowedOffsetMs { get; set; } = 50;
 
         /// <summary>
-        /// Subtitle formats to process.
+        /// Gets or sets the enabled subtitle formats.
         /// </summary>
-        public List<SubtitleFormat> EnabledFormats { get; set; } = new List<SubtitleFormat>
-        {
-            SubtitleFormat.SRT,
-            SubtitleFormat.ASS,
-            SubtitleFormat.WEBVTT
-        };
+        public List<string> EnabledFormats { get; set; } = new List<string> { "SRT", "ASS", "SSA", "WEBVTT" };
 
         /// <summary>
-        /// Create backups before modifying.
+        /// Gets or sets a value indicating whether to create backups.
         /// </summary>
         public bool CreateBackups { get; set; } = true;
 
         /// <summary>
-        /// Notification settings.
-        /// </summary>
-        public bool NotifyOnSync { get; set; } = true;
-
-        /// <summary>
-        /// Backup suffix for subtitle files.
+        /// Gets or sets the backup suffix.
         /// </summary>
         public string BackupSuffix { get; set; } = ".syncbackup";
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to notify on sync.
+        /// </summary>
+        public bool NotifyOnSync { get; set; } = true;
     }
 }

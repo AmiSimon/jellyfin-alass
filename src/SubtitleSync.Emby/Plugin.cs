@@ -1,223 +1,111 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
-using Microsoft.Extensions.Logging;
-using SubtitleSync.Core.Services;
-using SubtitleSync.Emby;
-using SubtitleSync.Shared.Interfaces;
 
 namespace SubtitleSync.Emby
 {
     /// <summary>
-    /// Main plugin class for Emby.
+    /// Main plugin entry point for Emby.
     /// </summary>
-    public class Plugin : IServerEntryPoint
+    public class Plugin : BasePlugin<PluginConfiguration>
     {
-        private readonly ILogger _logger;
-        private readonly MediaBrowser.Server.Plugins.IPluginManager _pluginManager;
-        private SubtitleSyncService? _syncService;
-        private EmbyAdapter? _adapter;
-        private MediaBrowser.Server.Plugins.Plugin? _pluginInstance;
+        /// <summary>
+        /// Gets the plugin name.
+        /// </summary>
+        public override string Name => "SubtitleSync";
+
+        /// <summary>
+        /// Gets the plugin description.
+        /// </summary>
+        public override string Description => "Automatically synchronizes out-of-sync subtitles for media files.";
+
+        /// <summary>
+        /// Gets the plugin version.
+        /// </summary>
+        public override Guid Id => Guid.Parse("D4E5F6G7-H8I9-0123-J4K5-L6M7N8O9P0Q1");
+
+        /// <summary>
+        /// Gets the plugin category.
+        /// </summary>
+        public override string Category => "Subtitles";
 
         /// <summary>
         /// Gets the plugin instance.
         /// </summary>
-        public static Plugin? Instance { get; private set; }
+        public static Plugin Instance { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the Plugin class.
         /// </summary>
-        public Plugin()
+        /// <param name="applicationPaths">The application paths.</param>
+        /// <param name="pluginManager">The plugin manager.</param>
+        public Plugin(IApplicationPaths applicationPaths, IPluginManager pluginManager)
+            : base(applicationPaths, pluginManager)
         {
             Instance = this;
         }
 
         /// <summary>
-        /// Initializes the plugin with dependencies.
+        /// Gets the plugin configuration.
         /// </summary>
-        /// <param name="plugin">The plugin instance.</param>
-        /// <param name="logger">The logger.</param>
-        /// <param name="pluginManager">The plugin manager.</param>
-        public void Initialize(
-            MediaBrowser.Server.Plugins.Plugin plugin,
-            ILogger logger,
-            MediaBrowser.Server.Plugins.IPluginManager pluginManager)
+        public PluginConfiguration Configuration => (PluginConfiguration)BaseConfiguration;
+
+        /// <summary>
+        /// Called when the plugin is loaded.
+        /// </summary>
+        public override void OnStartup()
         {
-            _pluginInstance = plugin;
-            _logger = logger;
-            _pluginManager = pluginManager;
+            base.OnStartup();
         }
 
         /// <summary>
-        /// Runs the plugin.
+        /// Called when the plugin is unloading.
         /// </summary>
-        public void Run()
+        public override void OnShutdown()
         {
-            try
-            {
-                _logger.LogInformation("SubtitleSync plugin starting...");
-
-                if (_pluginInstance == null)
-                {
-                    _logger.LogError("Plugin instance is null");
-                    return;
-                }
-
-                // Create the adapter
-                _adapter = new EmbyAdapter(_pluginInstance, _logger, _pluginManager);
-
-                // Initialize the sync service
-                _syncService = new SubtitleSyncService(_adapter);
-                _syncService.InitializeAsync().GetAwaiter().GetResult();
-
-                // Register event handlers
-                RegisterEventHandlers();
-
-                _logger.LogInformation("SubtitleSync plugin started successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error starting SubtitleSync plugin");
-            }
-        }
-
-        /// <summary>
-        /// Registers event handlers for media changes.
-        /// </summary>
-        private void RegisterEventHandlers()
-        {
-            if (_pluginInstance?.ApplicationHost == null)
-                return;
-
-            try
-            {
-                var libraryManager = _pluginInstance.ApplicationHost.Resolve<MediaBrowser.Server.Library.ILibraryManager>();
-                
-                // In Emby, we can use the ItemAdded and ItemUpdated events
-                // Note: The actual event names might differ in Emby
-                
-                _logger.LogInformation("Event handlers registered");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error registering event handlers");
-            }
-        }
-
-        /// <summary>
-        /// Processes a media item when it's added or updated.
-        /// </summary>
-        /// <param name="itemId">The ID of the media item.</param>
-        public async Task ProcessMediaItemAsync(string itemId)
-        {
-            if (_syncService != null)
-            {
-                await _syncService.ProcessMediaItemAsync(itemId);
-            }
-        }
-
-        /// <summary>
-        /// Gets the sync service.
-        /// </summary>
-        public SubtitleSyncService? GetSyncService() => _syncService;
-
-        /// <summary>
-        /// Gets the adapter.
-        /// </summary>
-        public EmbyAdapter? GetAdapter() => _adapter;
-
-        /// <summary>
-        /// Disposes the plugin.
-        /// </summary>
-        public void Dispose()
-        {
-            _syncService?.Dispose();
-            _syncService = null;
+            base.OnShutdown();
         }
     }
 
     /// <summary>
     /// Plugin configuration for Emby.
     /// </summary>
-    public class PluginConfiguration
+    public class PluginConfiguration : BasePluginConfiguration
     {
         /// <summary>
-        /// Enable/disable automatic sync.
+        /// Gets or sets a value indicating whether auto sync is enabled.
         /// </summary>
         public bool EnableAutoSync { get; set; } = true;
 
         /// <summary>
-        /// Minimum confidence threshold for auto-correction (0.0 to 1.0).
+        /// Gets or sets the minimum confidence threshold for auto-correction (0.0-1.0).
         /// </summary>
         public double MinConfidenceThreshold { get; set; } = 0.9;
 
         /// <summary>
-        /// Maximum allowed offset before correction (milliseconds).
+        /// Gets or sets the maximum allowed offset in milliseconds.
         /// </summary>
         public int MaxAllowedOffsetMs { get; set; } = 50;
 
         /// <summary>
-        /// Subtitle formats to process.
+        /// Gets or sets the enabled subtitle formats.
         /// </summary>
-        public List<SubtitleFormat> EnabledFormats { get; set; } = new List<SubtitleFormat>
-        {
-            SubtitleFormat.SRT,
-            SubtitleFormat.ASS,
-            SubtitleFormat.WEBVTT
-        };
+        public List<string> EnabledFormats { get; set; } = new List<string> { "SRT", "ASS", "SSA", "WEBVTT" };
 
         /// <summary>
-        /// Create backups before modifying.
+        /// Gets or sets a value indicating whether to create backups.
         /// </summary>
         public bool CreateBackups { get; set; } = true;
 
         /// <summary>
-        /// Notification settings.
-        /// </summary>
-        public bool NotifyOnSync { get; set; } = true;
-
-        /// <summary>
-        /// Backup suffix for subtitle files.
+        /// Gets or sets the backup suffix.
         /// </summary>
         public string BackupSuffix { get; set; } = ".syncbackup";
-    }
-
-    /// <summary>
-    /// Plugin entry point factory for Emby.
-    /// </summary>
-    public class PluginEntryPoint : IServerEntryPoint
-    {
-        private readonly ILogger _logger;
-        private readonly MediaBrowser.Server.Plugins.IPluginManager _pluginManager;
-        private Plugin? _plugin;
 
         /// <summary>
-        /// Initializes a new instance of the PluginEntryPoint class.
+        /// Gets or sets a value indicating whether to notify on sync.
         /// </summary>
-        public PluginEntryPoint(ILogger logger, MediaBrowser.Server.Plugins.IPluginManager pluginManager)
-        {
-            _logger = logger;
-            _pluginManager = pluginManager;
-        }
-
-        /// <summary>
-        /// Runs the plugin entry point.
-        /// </summary>
-        public void Run()
-        {
-            // This will be called by Emby when loading the plugin
-        }
-
-        /// <summary>
-        /// Disposes the entry point.
-        /// </summary>
-        public void Dispose()
-        {
-            _plugin?.Dispose();
-            _plugin = null;
-        }
+        public bool NotifyOnSync { get; set; } = true;
     }
 }

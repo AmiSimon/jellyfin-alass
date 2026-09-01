@@ -1,202 +1,122 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace SubtitleSync.Shared.Interfaces
 {
     /// <summary>
-    /// Unified interface for accessing media server functionality.
-    /// Implemented by both Jellyfin and Emby adapters.
+    /// Abstraction for media server operations (Jellyfin/Emby).
     /// </summary>
     public interface IMediaServerAbstraction
     {
         /// <summary>
-        /// Gets all media items from the library
+        /// Gets the name of the media server.
         /// </summary>
-        Task<IEnumerable<MediaItem>> GetMediaItemsAsync();
+        string ServerName { get; }
 
         /// <summary>
-        /// Gets a specific media item by ID
+        /// Gets the version of the media server.
         /// </summary>
-        Task<MediaItem> GetMediaItemAsync(string itemId);
+        string ServerVersion { get; }
 
         /// <summary>
-        /// Gets the media stream for a file
+        /// Gets the plugin configuration directory path.
         /// </summary>
-        Task<Stream> GetMediaStreamAsync(string path);
+        string PluginConfigurationDirectory { get; }
 
         /// <summary>
-        /// Gets the subtitle stream for a file
+        /// Gets the plugin data directory path.
         /// </summary>
-        Task<Stream> GetSubtitleStreamAsync(string path);
+        string PluginDataDirectory { get; }
 
         /// <summary>
-        /// Saves a subtitle file
+        /// Gets all media items that have subtitle files.
         /// </summary>
-        Task SaveSubtitleAsync(string path, Stream content);
+        /// <returns>A collection of media items with subtitles.</returns>
+        Task<IEnumerable<IMediaItem>> GetMediaItemsWithSubtitlesAsync();
 
         /// <summary>
-        /// Gets all subtitle files for a media item
+        /// Gets the subtitle files for a specific media item.
         /// </summary>
-        Task<IEnumerable<SubtitleFile>> GetSubtitleFilesAsync(string itemId);
+        /// <param name="mediaItemId">The media item ID.</param>
+        /// <returns>A collection of subtitle file paths.</returns>
+        Task<IEnumerable<string>> GetSubtitleFilesAsync(string mediaItemId);
 
         /// <summary>
-        /// Gets plugin configuration
+        /// Gets the duration of a media item.
         /// </summary>
-        Task<PluginConfiguration> GetConfigurationAsync();
+        /// <param name="mediaItemId">The media item ID.</param>
+        /// <returns>The media duration.</returns>
+        Task<TimeSpan> GetMediaDurationAsync(string mediaItemId);
 
         /// <summary>
-        /// Saves plugin configuration
+        /// Gets the file path for a subtitle.
         /// </summary>
-        Task SaveConfigurationAsync(PluginConfiguration config);
+        /// <param name="subtitleId">The subtitle ID.</param>
+        /// <returns>The full file path.</returns>
+        Task<string> GetSubtitleFilePathAsync(string subtitleId);
 
         /// <summary>
-        /// Gets the server's logger
+        /// Sends a notification to the user.
         /// </summary>
-        ILogger GetLogger();
+        /// <param name="title">The notification title.</param>
+        /// <param name="message">The notification message.</param>
+        Task SendNotificationAsync(string title, string message);
 
         /// <summary>
-        /// Gets the server version
+        /// Logs a message to the server log.
         /// </summary>
-        string GetServerVersion();
-
-        /// <summary>
-        /// Gets a service of the specified type
-        /// </summary>
-        T GetService<T>() where T : class;
+        /// <param name="level">The log level.</param>
+        /// <param name="message">The message.</param>
+        /// <param name="args">The arguments.</param>
+        Task LogAsync(LogLevel level, string message, params object[] args);
     }
 
     /// <summary>
-    /// Represents a media item in the library
+    /// Represents a media item.
     /// </summary>
-    public class MediaItem
+    public interface IMediaItem
     {
-        public string Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string Path { get; set; } = string.Empty;
-        public TimeSpan Duration { get; set; }
-        public DateTime DateCreated { get; set; }
-        public DateTime DateModified { get; set; }
-        public MediaType Type { get; set; }
+        /// <summary>
+        /// Gets the unique identifier of the media item.
+        /// </summary>
+        string Id { get; }
+
+        /// <summary>
+        /// Gets the name of the media item.
+        /// </summary>
+        string Name { get; }
+
+        /// <summary>
+        /// Gets the type of the media item (Movie, Episode, etc.).
+        /// </summary>
+        string Type { get; }
+
+        /// <summary>
+        /// Gets the path to the media file.
+        /// </summary>
+        string Path { get; }
+
+        /// <summary>
+        /// Gets the duration of the media item.
+        /// </summary>
+        TimeSpan Duration { get; }
+
+        /// <summary>
+        /// Gets the date the media was added.
+        /// </summary>
+        DateTime DateAdded { get; }
     }
 
     /// <summary>
-    /// Represents a subtitle file
+    /// Log levels for media server logging.
     /// </summary>
-    public class SubtitleFile
+    public enum LogLevel
     {
-        public string Id { get; set; } = string.Empty;
-        public string Path { get; set; } = string.Empty;
-        public string Language { get; set; } = string.Empty;
-        public SubtitleFormat Format { get; set; }
-        public bool IsForced { get; set; }
-        public bool IsDefault { get; set; }
-    }
-
-    /// <summary>
-    /// Media item type
-    /// </summary>
-    public enum MediaType
-    {
-        Unknown,
-        Video,
-        Audio,
-        Photo
-    }
-
-    /// <summary>
-    /// Subtitle file format
-    /// </summary>
-    public enum SubtitleFormat
-    {
-        Unknown,
-        SRT,
-        ASS,
-        SSA,
-        WEBVTT,
-        VTT
-    }
-
-    /// <summary>
-    /// Plugin configuration
-    /// </summary>
-    public class PluginConfiguration
-    {
-        /// <summary>
-        /// Enable/disable automatic sync
-        /// </summary>
-        public bool EnableAutoSync { get; set; } = true;
-
-        /// <summary>
-        /// Minimum confidence threshold for auto-correction (0.0 to 1.0)
-        /// </summary>
-        public double MinConfidenceThreshold { get; set; } = 0.9;
-
-        /// <summary>
-        /// Maximum allowed offset before correction (milliseconds)
-        /// </summary>
-        public int MaxAllowedOffsetMs { get; set; } = 50;
-
-        /// <summary>
-        /// Subtitle formats to process
-        /// </summary>
-        public List<SubtitleFormat> EnabledFormats { get; set; } = new List<SubtitleFormat>
-        {
-            SubtitleFormat.SRT,
-            SubtitleFormat.ASS,
-            SubtitleFormat.WEBVTT
-        };
-
-        /// <summary>
-        /// Create backups before modifying
-        /// </summary>
-        public bool CreateBackups { get; set; } = true;
-
-        /// <summary>
-        /// Notification settings
-        /// </summary>
-        public bool NotifyOnSync { get; set; } = true;
-
-        /// <summary>
-        /// Backup suffix for subtitle files
-        /// </summary>
-        public string BackupSuffix { get; set; } = ".syncbackup";
-    }
-
-    /// <summary>
-    /// Logger interface
-    /// </summary>
-    public interface ILogger
-    {
-        void Debug(string message);
-        void Debug(Exception exception, string message);
-        void Info(string message);
-        void Info(Exception exception, string message);
-        void Warn(string message);
-        void Warn(Exception exception, string message);
-        void Error(string message);
-        void Error(Exception exception, string message);
-        void Fatal(string message);
-        void Fatal(Exception exception, string message);
-    }
-
-    /// <summary>
-    /// File system abstraction
-    /// </summary>
-    public interface IFileSystem
-    {
-        bool FileExists(string path);
-        bool DirectoryExists(string path);
-        Task CopyFileAsync(string source, string destination, bool overwrite = false);
-        Task<Stream> OpenReadAsync(string path);
-        Task<Stream> OpenWriteAsync(string path);
-        Task DeleteFileAsync(string path);
-        string GetDirectoryName(string path);
-        string GetFileName(string path);
-        string GetFileNameWithoutExtension(string path);
-        string GetExtension(string path);
-        string Combine(string path1, string path2);
-        DateTime GetLastWriteTime(string path);
+        Debug,
+        Info,
+        Warning,
+        Error,
+        Critical
     }
 }

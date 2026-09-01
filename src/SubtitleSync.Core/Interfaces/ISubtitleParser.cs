@@ -67,6 +67,46 @@ namespace SubtitleSync.Core.Interfaces
             {
                 SubtitleFormat.SRT => new SrtParser(),
                 SubtitleFormat.ASS => new AssParser(),
-                SubtitleFormat.SSA => new SsaParser(),
+                SubtitleFormat.SSA => new AssParser(),
                 SubtitleFormat.WEBVTT or SubtitleFormat.VTT => new WebVttParser(),
-                _ => throw new ArgumentException($
+                _ => throw new ArgumentException($"Unsupported subtitle format: {format}")
+            };
+
+            _parsers[format] = parser;
+            return parser;
+        }
+
+        /// <summary>
+        /// Gets all supported subtitle formats.
+        /// </summary>
+        public static IEnumerable<SubtitleFormat> SupportedFormats => new[]
+        {
+            SubtitleFormat.SRT,
+            SubtitleFormat.ASS,
+            SubtitleFormat.SSA,
+            SubtitleFormat.WEBVTT,
+            SubtitleFormat.VTT
+        };
+
+        /// <summary>
+        /// Gets a parser for the specified file extension.
+        /// </summary>
+        /// <param name="extension">The file extension (e.g., ".srt", ".ass").</param>
+        /// <returns>An ISubtitleParser instance, or null if not supported.</returns>
+        public static ISubtitleParser? GetParserByExtension(string extension)
+        {
+            if (string.IsNullOrWhiteSpace(extension))
+                return null;
+
+            var ext = extension.TrimStart('.').ToLowerInvariant();
+            return ext switch
+            {
+                "srt" => new SrtParser(),
+                "ass" => new AssParser(),
+                "ssa" => new AssParser(),
+                "vtt" => new WebVttParser(),
+                _ => null
+            };
+        }
+    }
+}

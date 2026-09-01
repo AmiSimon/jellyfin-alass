@@ -9,175 +9,140 @@ using SubtitleSync.Core.Models;
 namespace SubtitleSync.Core.SubtitleParsers
 {
     /// <summary>
-    /// Parser for WebVTT subtitle format.
+    /// Parser for Web Video Text Tracks (WebVTT) subtitle format.
     /// </summary>
     public class WebVttParser : SubtitleParserBase
     {
         private static readonly Regex TimingRegex = new Regex(
-            @"(\d{2}:\d{2}:\d{2}\.\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}\.\d{3})",
+            @"(\d{2}:\d{2}:\d{2}\.\d{3})\s+--\>\s+(\d{2}:\d{2}:\d{2}\.\d{3})",
             RegexOptions.Compiled);
 
-        private static readonly Regex CueSettingsRegex = new Regex(
-            @"<\d+\.\d+%>\s*(align:\S+)?\s*(position:\S+)?\s*(size:\S+)?\s*(line:\S+)?",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
+        /// <summary>
+        /// Gets the subtitle format this parser handles.
+        /// </summary>
         public override SubtitleFormat Format => SubtitleFormat.WEBVTT;
 
+        /// <summary>
+        /// Parses a subtitle file from a string.
+        /// </summary>
+        /// <param name="content">The subtitle file content.</param>
+        /// <returns>A list of subtitle entries.</returns>
         public override async Task<IEnumerable<SubtitleEntry>> ParseAsync(string content)
         {
+            if (string.IsNullOrWhiteSpace(content))
+                return Array.Empty<SubtitleEntry>();
+
             var entries = new List<SubtitleEntry>();
-            var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
             bool inCue = false;
-            int index = 0;
             TimeSpan startTime = TimeSpan.Zero;
             TimeSpan endTime = TimeSpan.Zero;
             var textBuilder = new StringBuilder();
-            var styleBuilder = new StringBuilder();
+            int sequence = 1;
 
-            for (int i = 0; i < lines.Length; i++)
+            foreach (var line in lines)
             {
-                var line = lines[i].Trim();
+                var trimmed = line.Trim();
 
-                // Skip WEBVTT header
-                if (line.Equals("WEBVTT", StringComparison.OrdinalIgnoreCase))
+                // Skip WebVTT header
+                if (trimmed.Equals("WEBVTT", StringComparison.OrdinalIgnoreCase) ||
+                    trimmed.StartsWith("WEBVTT ", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                // Skip comments and empty lines
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("NOTE", StringComparison.OrdinalIgnoreCase))
+                // Skip comments
+                if (trimmed.StartsWith("NOTE") || trimmed.StartsWith("-->"))
+                    continue;
+
+                // Skip empty lines
+                if (string.IsNullOrWhiteSpace(trimmed))
                 {
-                    // If we're in a cue, save it
                     if (inCue && textBuilder.Length > 0)
                     {
                         entries.Add(new SubtitleEntry
                         {
-                            Index = index++,
+                            SequenceNumber = sequence++,
                             StartTime = startTime,
                             EndTime = endTime,
-                            Text = textBuilder.ToString().Trim(),
-                            Style = styleBuilder.Length > 0 ? styleBuilder.ToString() : null
+                            Text = textBuilder.ToString().Trim()
                         });
+
                         inCue = false;
                         textBuilder.Clear();
-                        styleBuilder.Clear();
                     }
                     continue;
                 }
 
                 // Parse timing line
-                var timingMatch = TimingRegex.Match(line);
+                var timingMatch = TimingRegex.Match(trimmed);
                 if (timingMatch.Success)
                 {
-                    // Save previous cue if exists
-                    if (inCue && textBuilder.Length > 0)
+                    if (!TimeSpan.TryParseExact(
+                        timingMatch.Groups[1].Value,
+                        "hh\:mm\:ss\.fff",
+                        CultureInfo.InvariantCulture,
+                        out startTime))
                     {
-                        entries.Add(new SubtitleEntry
-                        {
-                            Index = index++,
-                            StartTime = startTime,
-                            EndTime = endTime,
-                            Text = textBuilder.ToString().Trim(),
-                            Style = styleBuilder.Length > 0 ? styleBuilder.ToString() : null
-                        });
+                        continue;
                     }
 
-                    startTime = ParseTimeSpan(timingMatch.Groups[1].Value);
-                    endTime = ParseTimeSpan(timingMatch.Groups[2].Value);
+                    if (!TimeSpan.TryParseExact(
+                        timingMatch.Groups[2].Value,
+                        "hh\:mm\:ss\.fff",
+                        CultureInfo.InvariantCulture,
+                        out endTime))
+                    {
+                        continue;
+                    }
+
                     inCue = true;
                     textBuilder.Clear();
-                    styleBuilder.Clear();
                     continue;
                 }
 
-                // Parse cue settings (optional line after timing)
-                var settingsMatch = CueSettingsRegex.Match(line);
-                if (inCue && !inCue && settingsMatch.Success)
-                {
-                    // This is a cue identifier with settings
-                    styleBuilder.Append(line);
-                    continue;
-                }
-
-                // If we're in a cue, this is text content
+                // Text line
                 if (inCue)
                 {
                     if (textBuilder.Length > 0)
                         textBuilder.AppendLine();
-                    textBuilder.Append(line);
+                    textBuilder.Append(trimmed);
                 }
             }
 
-            // Don't forget the last cue
+            // Add last entry if exists
             if (inCue && textBuilder.Length > 0)
             {
                 entries.Add(new SubtitleEntry
                 {
-                    Index = index,
+                    SequenceNumber = sequence,
                     StartTime = startTime,
                     EndTime = endTime,
-                    Text = textBuilder.ToString().Trim(),
-                    Style = styleBuilder.Length > 0 ? styleBuilder.ToString() : null
+                    Text = textBuilder.ToString().Trim()
                 });
             }
 
             return entries;
         }
 
+        /// <summary>
+        /// Writes subtitle entries to a string.
+        /// </summary>
+        /// <param name="entries">The subtitle entries to write.</param>
+        /// <returns>The subtitle file content as a string.</returns>
         public override async Task<string> WriteAsync(IEnumerable<SubtitleEntry> entries)
         {
             var builder = new StringBuilder();
-
-            // Write WEBVTT header
             builder.AppendLine("WEBVTT");
             builder.AppendLine();
 
             foreach (var entry in entries)
             {
-                // Write timing
-                builder.AppendLine($"{FormatTimeSpan(entry.StartTime)} --> {FormatTimeSpan(entry.EndTime)}");
-
-                // Write style if present
-                if (!string.IsNullOrEmpty(entry.Style))
-                {
-                    builder.AppendLine(entry.Style);
-                }
-
-                // Write text
-                var textLines = entry.Text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var line in textLines)
-                {
-                    builder.AppendLine(line);
-                }
-
-                // Add blank line between cues
+                builder.AppendLine($"{entry.StartTime:hh\:mm\:ss\.fff} --> {entry.EndTime:hh\:mm\:ss\.fff}");
+                builder.AppendLine(entry.Text);
                 builder.AppendLine();
             }
 
-            return builder.ToString().TrimEnd();
-        }
-
-        private TimeSpan ParseTimeSpan(string timeString)
-        {
-            // Format: hh:mm:ss.fff
-            var parts = timeString.Split(new[] { ':', '.' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 4) return TimeSpan.Zero;
-
-            var hours = int.Parse(parts[0], CultureInfo.InvariantCulture);
-            var minutes = int.Parse(parts[1], CultureInfo.InvariantCulture);
-            var seconds = int.Parse(parts[2], CultureInfo.InvariantCulture);
-            var milliseconds = int.Parse(parts[3], CultureInfo.InvariantCulture);
-
-            return new TimeSpan(0, hours, minutes, seconds, milliseconds);
-        }
-
-        private string FormatTimeSpan(TimeSpan timeSpan)
-        {
-            // Ensure non-negative time
-            if (timeSpan < TimeSpan.Zero)
-                timeSpan = TimeSpan.Zero;
-
-            return $"{timeSpan.Hours:D2}:{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}.{timeSpan.Milliseconds:D3}";
+            return builder.ToString();
         }
     }
 }
-
