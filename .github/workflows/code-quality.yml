@@ -76,7 +76,7 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Restore dependencies
-      run: dotnet restore SubtitleSync.sln
+      run: dotnet restore SubtitleSync.sln --configfile nuget.config
 
     - name: Check for vulnerable dependencies
       run: |

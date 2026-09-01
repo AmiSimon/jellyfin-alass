@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <PackageReference Include="Jellyfin.Data" Version="10.8.0" />
-    <PackageReference Include="MediaBrowser.Model" Version="10.8.0" />
+    <PackageReference Include="Jellyfin.Model" Version="10.8.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
   </ItemGroup>
 
