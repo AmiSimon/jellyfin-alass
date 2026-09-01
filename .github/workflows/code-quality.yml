@@ -1,0 +1,130 @@
+name: Code Quality Checks
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: code-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  formatting:
+    name: Code Formatting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install dotnet-format
+      run: dotnet tool install -g dotnet-format
+
+    - name: Check formatting
+      run: dotnet format --verify-no-changes --severity error SubtitleSync.sln
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install Roslyn Analyzers
+      run: |
+        dotnet new tool-manifest --force
+        dotnet tool install -g Microsoft.CodeAnalysis.RoslynAnalyzer
+
+    - name: Run Roslyn Analyzers
+      run: |
+        dotnet build SubtitleSync.sln \
+          --configuration Release \
+          --no-restore \
+          /p:RunAnalyzersDuringBuild=true \
+          /p:TreatWarningsAsErrors=true \
+          /p:EnforceCodeStyleInBuild=true
+
+  dependency-check:
+    name: Dependency Security Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore SubtitleSync.sln
+
+    - name: Check for vulnerable dependencies
+      run: |
+        dotnet list package --vulnerable --include-transitive --format json > vulnerabilities.json
+        
+        # Check if any vulnerabilities were found
+        if [ -s vulnerabilities.json ]; then
+          echo "::warning::Vulnerable dependencies detected!"
+          cat vulnerabilities.json
+          exit 1
+        fi
+
+  code-coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install coverlet tool
+      run: dotnet tool install -g coverlet.console
+
+    - name: Run tests with coverage
+      run: |
+        coverlet tests/SubtitleSync.Core.Tests/bin/Release/net8.0/SubtitleSync.Core.Tests.dll \
+          --target "dotnet" \
+          --targetargs "test tests/SubtitleSync.Core.Tests/SubtitleSync.Core.Tests.csproj --configuration Release --no-build" \
+          --output ./coverage/coverage.json \
+          --format json
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: Coverage-Report
+        path: ./coverage/
+        retention-days: 7
+
+    - name: Check coverage threshold
+      run: |
+        # Parse coverage JSON and check threshold (example: 80%)
+        COVERAGE=$(jq -r '.Total.CoveragePercent' ./coverage/coverage.json)
+        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          echo "::warning::Code coverage is below 80%: $COVERAGE%"
+          # exit 1  # Uncomment to fail the build on low coverage
+        fi

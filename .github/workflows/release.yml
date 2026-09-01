@@ -1,0 +1,214 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_name: ${{ steps.release_name.outputs.release_name }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        TAG=${{ github.ref_name }}
+        VERSION=${TAG#v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Set release name
+      id: release_name
+      run: |
+        echo "release_name=SubtitleSync v${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
+
+    - name: Validate version
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+          echo "::error::Invalid version format: $VERSION"
+          echo "Expected format: X.Y.Z or X.Y.Z.W (e.g., 1.0.0 or 1.0.0.0)"
+          exit 1
+        fi
+
+  build-release:
+    name: Build Release
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        platform: [jellyfin, emby]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore SubtitleSync.sln
+
+    - name: Build plugin
+      run: |
+        PLATFORM=${{ matrix.platform }}
+        dotnet build src/SubtitleSync.${PLATFORM}/SubtitleSync.${PLATFORM}.csproj \
+          --configuration Release \
+          --no-restore \
+          /p:Version=${{ needs.prepare-release.outputs.version }} \
+          /p:AssemblyVersion=${{ needs.prepare-release.outputs.version }} \
+          /p:FileVersion=${{ needs.prepare-release.outputs.version }} \
+          --output ./artifacts/${PLATFORM}
+
+    - name: Copy manifest files
+      run: |
+        PLATFORM=${{ matrix.platform }}
+        if [ "$PLATFORM" = "jellyfin" ]; then
+          cp src/SubtitleSync.${PLATFORM}/plugin.json ./artifacts/${PLATFORM}/
+        else
+          cp src/SubtitleSync.${PLATFORM}/manifest.json ./artifacts/${PLATFORM}/
+        fi
+
+    - name: Upload plugin artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SubtitleSync-${{ matrix.platform }}-${{ needs.prepare-release.outputs.version }}
+        path: ./artifacts/${{ matrix.platform }}/
+        retention-days: 90
+
+  create-github-release:
+    name: Create GitHub Release
+    needs: [prepare-release, build-release]
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./release-artifacts
+        merge-multiple: true
+
+    - name: Create release packages
+      run: |
+        mkdir -p ./release-packages
+        
+        # Create Jellyfin package
+        mkdir -p ./release-packages/SubtitleSync-Jellyfin
+        cp ./release-artifacts/SubtitleSync-jellyfin-${{ needs.prepare-release.outputs.version }}/* ./release-packages/SubtitleSync-Jellyfin/
+        cd ./release-packages/SubtitleSync-Jellyfin && zip -r ../SubtitleSync-Jellyfin-v${{ needs.prepare-release.outputs.version }}.zip * && cd ../..
+        
+        # Create Emby package
+        mkdir -p ./release-packages/SubtitleSync-Emby
+        cp ./release-artifacts/SubtitleSync-emby-${{ needs.prepare-release.outputs.version }}/* ./release-packages/SubtitleSync-Emby/
+        cd ./release-packages/SubtitleSync-Emby && zip -r ../SubtitleSync-Emby-v${{ needs.prepare-release.outputs.version }}.zip * && cd ../..
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: ${{ needs.prepare-release.outputs.release_name }}
+        body: |
+          **SubtitleSync Plugin Release**
+          
+          **Version:** ${{ needs.prepare-release.outputs.version }}
+          **Release Date:** ${{ github.event.head_commit.timestamp }}
+          
+          **What's New:**
+          - See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for details
+          
+          **Compatibility:**
+          - Jellyfin 10.8+
+          - Emby 4.7+
+          
+          **Installation:**
+          
+          **For Jellyfin:**
+          1. Download SubtitleSync-Jellyfin-v${{ needs.prepare-release.outputs.version }}.zip
+          2. Extract to your Jellyfin plugins directory
+          3. Restart Jellyfin
+          
+          **For Emby:**
+          1. Download SubtitleSync-Emby-v${{ needs.prepare-release.outputs.version }}.zip
+          2. Extract to your Emby plugins directory
+          3. Restart Emby
+        files: |
+          ./release-packages/SubtitleSync-Jellyfin-v${{ needs.prepare-release.outputs.version }}.zip
+          ./release-packages/SubtitleSync-Emby-v${{ needs.prepare-release.outputs.version }}.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-nuget:
+    name: Publish NuGet Packages
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    if: contains(github.ref_name, 'v')
+    
+    permissions:
+      packages: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Pack Core library
+      run: |
+        dotnet pack src/SubtitleSync.Core/SubtitleSync.Core.csproj \
+          --configuration Release \
+          /p:Version=${{ needs.prepare-release.outputs.version }} \
+          /p:PackageVersion=${{ needs.prepare-release.outputs.version }} \
+          --output ./nuget-packages
+
+    - name: Publish to NuGet
+      run: |
+        for pkg in ./nuget-packages/*.nupkg; do
+          dotnet nuget push "$pkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --skip-duplicate
+        done
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
