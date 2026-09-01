@@ -105,6 +105,9 @@ jobs:
     - name: Install coverlet tool
       run: dotnet tool install -g coverlet.console
 
+    - name: Restore test project dependencies
+      run: dotnet restore tests/SubtitleSync.Core.Tests/SubtitleSync.Core.Tests.csproj --configfile nuget.config
+
     - name: Build test project
       run: dotnet build tests/SubtitleSync.Core.Tests/SubtitleSync.Core.Tests.csproj --configuration Release --no-restore
 
