@@ -1,0 +1,48 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubtitleSync.Core", "src\SubtitleSync.Core\SubtitleSync.Core.csproj", "{A1B2C3D4-E5F6-7890-G1H2-I3J4K5L6M7N8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubtitleSync.Shared", "src\SubtitleSync.Shared\SubtitleSync.Shared.csproj", "{B2C3D4E5-F6G7-8901-H2I3-J4K5L6M7N8O9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubtitleSync.Jellyfin", "src\SubtitleSync.Jellyfin\SubtitleSync.Jellyfin.csproj", "{C3D4E5F6-G7H8-9012-I3J4-K5L6M7N8O9P0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubtitleSync.Emby", "src\SubtitleSync.Emby\SubtitleSync.Emby.csproj", "{D4E5F6G7-H8I9-0123-J4K5-L6M7N8O9P0Q1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubtitleSync.Core.Tests", "tests\SubtitleSync.Core.Tests\SubtitleSync.Core.Tests.csproj", "{E5F6G7H8-I9J0-1234-K5L6-M7N8O9P0Q1R2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|AnyCPU = Debug|AnyCPU
+		Release|AnyCPU = Release|AnyCPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1B2C3D4-E5F6-7890-G1H2-I3J4K5L6M7N8}.Debug|AnyCPU.ActiveCfg = Debug|AnyCPU
+		{A1B2C3D4-E5F6-7890-G1H2-I3J4K5L6M7N8}.Debug|AnyCPU.Build.0 = Debug|AnyCPU
+		{A1B2C3D4-E5F6-7890-G1H2-I3J4K5L6M7N8}.Release|AnyCPU.ActiveCfg = Release|AnyCPU
+		{A1B2C3D4-E5F6-7890-G1H2-I3J4K5L6M7N8}.Release|AnyCPU.Build.0 = Release|AnyCPU
+		{B2C3D4E5-F6G7-8901-H2I3-J4K5L6M7N8O9}.Debug|AnyCPU.ActiveCfg = Debug|AnyCPU
+		{B2C3D4E5-F6G7-8901-H2I3-J4K5L6M7N8O9}.Debug|AnyCPU.Build.0 = Debug|AnyCPU
+		{B2C3D4E5-F6G7-8901-H2I3-J4K5L6M7N8O9}.Release|AnyCPU.ActiveCfg = Release|AnyCPU
+		{B2C3D4E5-F6G7-8901-H2I3-J4K5L6M7N8O9}.Release|AnyCPU.Build.0 = Release|AnyCPU
+		{C3D4E5F6-G7H8-9012-I3J4-K5L6M7N8O9P0}.Debug|AnyCPU.ActiveCfg = Debug|AnyCPU
+		{C3D4E5F6-G7H8-9012-I3J4-K5L6M7N8O9P0}.Debug|AnyCPU.Build.0 = Debug|AnyCPU
+		{C3D4E5F6-G7H8-9012-I3J4-K5L6M7N8O9P0}.Release|AnyCPU.ActiveCfg = Release|AnyCPU
+		{C3D4E5F6-G7H8-9012-I3J4-K5L6M7N8O9P0}.Release|AnyCPU.Build.0 = Release|AnyCPU
+		{D4E5F6G7-H8I9-0123-J4K5-L6M7N8O9P0Q1}.Debug|AnyCPU.ActiveCfg = Debug|AnyCPU
+		{D4E5F6G7-H8I9-0123-J4K5-L6M7N8O9P0Q1}.Debug|AnyCPU.Build.0 = Debug|AnyCPU
+		{D4E5F6G7-H8I9-0123-J4K5-L6M7N8O9P0Q1}.Release|AnyCPU.ActiveCfg = Release|AnyCPU
+		{D4E5F6G7-H8I9-0123-J4K5-L6M7N8O9P0Q1}.Release|AnyCPU.Build.0 = Release|AnyCPU
+		{E5F6G7H8-I9J0-1234-K5L6-M7N8O9P0Q1R2}.Debug|AnyCPU.ActiveCfg = Debug|AnyCPU
+		{E5F6G7H8-I9J0-1234-K5L6-M7N8O9P0Q1R2}.Debug|AnyCPU.Build.0 = Debug|AnyCPU
+		{E5F6G7H8-I9J0-1234-K5L6-M7N8O9P0Q1R2}.Release|AnyCPU.ActiveCfg = Release|AnyCPU
+		{E5F6G7H8-I9J0-1234-K5L6-M7N8O9P0Q1R2}.Release|AnyCPU.Build.0 = Release|AnyCPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F6G7H8I9-J0K1-1234-L5M6-N7O8P9Q0R1S2}
+	EndGlobalSection
+EndGlobal

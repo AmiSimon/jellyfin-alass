@@ -1,0 +1,15 @@
+{
+  "guid": "a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8",
+  "name": "SubtitleSync",
+  "version": "1.0.0",
+  "description": "Automatically synchronizes out-of-sync subtitles for media files.",
+  "category": "Subtitles",
+  "targetAbi": "10.8.0.0",
+  "timestamp": "2024-01-01T00:00:00.0000000Z",
+  "imageUrl": "/Plugins/SubtitleSync/images/icon.png",
+  "overrides": [],
+  "changelog": "Initial release",
+  "canRollBack": true,
+  "configurationPage": true,
+  "enableInPluginFolder": true
+}
