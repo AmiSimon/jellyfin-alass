@@ -48,12 +48,7 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Install Roslyn Analyzers
-      run: |
-        dotnet new tool-manifest --force
-        dotnet tool install -g Microsoft.CodeAnalysis.RoslynAnalyzer
-
-    - name: Run Roslyn Analyzers
+    - name: Run dotnet build with analyzers
       run: |
         dotnet build SubtitleSync.sln \
           --configuration Release \
