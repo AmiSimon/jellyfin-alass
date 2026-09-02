@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using MediaBrowser.Common.Plugins;
-using MediaBrowser.Model.Plugins;
 
 namespace SubtitleSync.Emby
 {
@@ -26,11 +25,6 @@ namespace SubtitleSync.Emby
         public override Guid Id => Guid.Parse("D4E5F6G7-H8I9-0123-J4K5-L6M7N8O9P0Q1");
 
         /// <summary>
-        /// Gets the plugin category.
-        /// </summary>
-        public override string Category => "Subtitles";
-
-        /// <summary>
         /// Gets the plugin instance.
         /// </summary>
         public static Plugin Instance { get; private set; }
@@ -44,27 +38,6 @@ namespace SubtitleSync.Emby
             : base(applicationPaths, pluginManager)
         {
             Instance = this;
-        }
-
-        /// <summary>
-        /// Gets the plugin configuration.
-        /// </summary>
-        public PluginConfiguration Configuration => (PluginConfiguration)BaseConfiguration;
-
-        /// <summary>
-        /// Called when the plugin is loaded.
-        /// </summary>
-        public override void OnStartup()
-        {
-            base.OnStartup();
-        }
-
-        /// <summary>
-        /// Called when the plugin is unloading.
-        /// </summary>
-        public override void OnShutdown()
-        {
-            base.OnShutdown();
         }
     }
 
