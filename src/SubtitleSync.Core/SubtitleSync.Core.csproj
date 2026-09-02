@@ -19,4 +19,8 @@
     <Compile Remove="**/bin/**;**/obj/**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SubtitleSync.Shared\SubtitleSync.Shared.csproj" />
+  </ItemGroup>
+
 </Project>
