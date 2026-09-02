@@ -48,6 +48,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
+    - name: Restore dependencies
+      run: dotnet restore SubtitleSync.sln --configfile nuget.config
+
     - name: Run dotnet build with analyzers
       run: |
         dotnet build SubtitleSync.sln \
