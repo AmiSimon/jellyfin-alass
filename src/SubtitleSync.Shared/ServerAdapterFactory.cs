@@ -1,6 +1,4 @@
 using System;
-using SubtitleSync.Emby;
-using SubtitleSync.Jellyfin;
 using SubtitleSync.Shared.Interfaces;
 
 namespace SubtitleSync.Shared
@@ -78,12 +76,7 @@ namespace SubtitleSync.Shared
             if (string.IsNullOrWhiteSpace(serverType))
                 throw new ArgumentException("Server type cannot be null or empty.", nameof(serverType));
 
-            return serverType switch
-            {
-                "Jellyfin" => new JellyfinAdapter(),
-                "Emby" => new EmbyAdapter(),
-                _ => throw new ArgumentException($"Unsupported server type: {serverType}")
-            };
+            throw new InvalidOperationException("Server adapters must be loaded dynamically. Use ServerAdapterFactory.Initialize() with a platform-specific adapter.");
         }
     }
 }
