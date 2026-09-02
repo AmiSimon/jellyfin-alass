@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore SubtitleSync.sln --configfile nuget.config
+
+    - name: Build all projects
+      run: dotnet build SubtitleSync.sln --configuration Release --no-restore
+
+    - name: Run tests
+      run: dotnet test tests/SubtitleSync.Core.Tests/SubtitleSync.Core.Tests.csproj --configuration Release --no-build --verbosity normal
