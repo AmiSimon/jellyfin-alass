@@ -118,17 +118,17 @@ namespace SubtitleSync.Emby
         {
             switch (level)
             {
-                case LogLevel.Debug:
+                case Shared.Interfaces.LogLevel.Debug:
                     _logger.Debug(message, args);
                     break;
-                case LogLevel.Info:
+                case Shared.Interfaces.LogLevel.Info:
                     _logger.Info(message, args);
                     break;
-                case LogLevel.Warning:
+                case Shared.Interfaces.LogLevel.Warning:
                     _logger.Warn(message, args);
                     break;
-                case LogLevel.Error:
-                case LogLevel.Critical:
+                case Shared.Interfaces.LogLevel.Error:
+                case Shared.Interfaces.LogLevel.Critical:
                     _logger.Error(message, args);
                     break;
             }
