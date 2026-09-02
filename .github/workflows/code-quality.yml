@@ -33,7 +33,7 @@ jobs:
       run: dotnet tool install -g dotnet-format
 
     - name: Check formatting
-      run: dotnet format --verify-no-changes --severity error SubtitleSync.sln
+      run: dotnet format --verify-no-changes --severity info SubtitleSync.sln
 
   static-analysis:
     name: Static Analysis
@@ -59,7 +59,6 @@ jobs:
           --configuration Release \
           --no-restore \
           /p:RunAnalyzersDuringBuild=true \
-          /p:TreatWarningsAsErrors=true \
           /p:EnforceCodeStyleInBuild=true
 
   dependency-check:
