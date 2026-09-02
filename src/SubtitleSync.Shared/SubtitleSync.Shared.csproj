@@ -19,4 +19,9 @@
     <Compile Remove="**/bin/**;**/obj/**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SubtitleSync.Jellyfin\SubtitleSync.Jellyfin.csproj" />
+    <ProjectReference Include="..\SubtitleSync.Emby\SubtitleSync.Emby.csproj" />
+  </ItemGroup>
+
 </Project>

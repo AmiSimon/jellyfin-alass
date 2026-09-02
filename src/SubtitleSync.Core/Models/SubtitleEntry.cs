@@ -38,7 +38,7 @@ namespace SubtitleSync.Core.Models
         /// </summary>
         public override string ToString()
         {
-            return $[{{StartTime:hh\:mm\:ss\.fff}} --> {{EndTime:hh\:mm\:ss\.fff}}] {Text}];
+            return $"[{StartTime:hh:mm:ss.fff} --> {EndTime:hh:mm:ss.fff}] {Text}";
         }
 
         /// <summary>

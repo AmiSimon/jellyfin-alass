@@ -14,7 +14,7 @@ namespace SubtitleSync.Core.SubtitleParsers
     public class WebVttParser : SubtitleParserBase
     {
         private static readonly Regex TimingRegex = new Regex(
-            @"(\d{2}:\d{2}:\d{2}\.\d{3})\s+--\>\s+(\d{2}:\d{2}:\d{2}\.\d{3})",
+            @"(\d{2}:\d{2}:\d{2}.\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}.\d{3})",
             RegexOptions.Compiled);
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace SubtitleSync.Core.SubtitleParsers
                 {
                     if (!TimeSpan.TryParseExact(
                         timingMatch.Groups[1].Value,
-                        "hh\:mm\:ss\.fff",
+                        "hh:mm:ss.fff",
                         CultureInfo.InvariantCulture,
                         out startTime))
                     {
@@ -88,7 +88,7 @@ namespace SubtitleSync.Core.SubtitleParsers
 
                     if (!TimeSpan.TryParseExact(
                         timingMatch.Groups[2].Value,
-                        "hh\:mm\:ss\.fff",
+                        "hh:mm:ss.fff",
                         CultureInfo.InvariantCulture,
                         out endTime))
                     {
@@ -137,7 +137,7 @@ namespace SubtitleSync.Core.SubtitleParsers
 
             foreach (var entry in entries)
             {
-                builder.AppendLine($"{entry.StartTime:hh\:mm\:ss\.fff} --> {entry.EndTime:hh\:mm\:ss\.fff}");
+                builder.AppendLine($"{entry.StartTime:hh:mm:ss.fff} --> {entry.EndTime:hh:mm:ss.fff}");
                 builder.AppendLine(entry.Text);
                 builder.AppendLine();
             }

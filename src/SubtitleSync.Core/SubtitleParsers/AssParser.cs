@@ -14,11 +14,11 @@ namespace SubtitleSync.Core.SubtitleParsers
     public class AssParser : SubtitleParserBase
     {
         private static readonly Regex DialogueRegex = new Regex(
-            @"Dialogue:\s*(?:Marked=\d+,\s*)?(\d+:\d{2}:\d{2}\.\d{2}),(\d+:\d{2}:\d{2}\.\d{2}),Default,(?:[^,]+,){5}(.+)",
+            @"Dialogue:\s*(?:Marked=\d+,\s*)?(\d+:\d{2}:\d{2}.\d{2}),(\d+:\d{2}:\d{2}.\d{2}),Default,(?:[^,]+,){5}(.+)",
             RegexOptions.Compiled);
 
         private static readonly Regex CommentRegex = new Regex(
-            @"Comment:\s*(?:Marked=\d+,\s*)?(\d+:\d{2}:\d{2}\.\d{2}),(\d+:\d{2}:\d{2}\.\d{2}),Default,(?:[^,]+,){5}(.+)",
+            @"Comment:\s*(?:Marked=\d+,\s*)?(\d+:\d{2}:\d{2}.\d{2}),(\d+:\d{2}:\d{2}.\d{2}),Default,(?:[^,]+,){5}(.+)",
             RegexOptions.Compiled);
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace SubtitleSync.Core.SubtitleParsers
 
                 if (!TimeSpan.TryParseExact(
                     match.Groups[1].Value.Replace(".", ":"),
-                    "hh\:mm\:ss\:ff",
+                    "hh:mm:ss:ff",
                     CultureInfo.InvariantCulture,
                     out TimeSpan startTime))
                 {
@@ -65,7 +65,7 @@ namespace SubtitleSync.Core.SubtitleParsers
 
                 if (!TimeSpan.TryParseExact(
                     match.Groups[2].Value.Replace(".", ":"),
-                    "hh\:mm\:ss\:ff",
+                    "hh:mm:ss:ff",
                     CultureInfo.InvariantCulture,
                     out TimeSpan endTime))
                 {
@@ -104,8 +104,8 @@ namespace SubtitleSync.Core.SubtitleParsers
 
             foreach (var entry in entries)
             {
-                var startStr = $"{(int)entry.StartTime.TotalHours:D2}:{entry.StartTime:mm\:ss\.ff}";
-                var endStr = $"{(int)entry.EndTime.TotalHours:D2}:{entry.EndTime:mm\:ss\.ff}";
+                var startStr = $"{(int)entry.StartTime.TotalHours:D2}:{entry.StartTime:mm:ss.ff}";
+                var endStr = $"{(int)entry.EndTime.TotalHours:D2}:{entry.EndTime:mm:ss.ff}";
 
                 builder.AppendLine($"Dialogue: 0,{startStr},{endStr},Default,,0,0,0,,{entry.Text}");
             }

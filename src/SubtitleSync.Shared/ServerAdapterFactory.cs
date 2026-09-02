@@ -1,4 +1,6 @@
 using System;
+using SubtitleSync.Emby;
+using SubtitleSync.Jellyfin;
 using SubtitleSync.Shared.Interfaces;
 
 namespace SubtitleSync.Shared

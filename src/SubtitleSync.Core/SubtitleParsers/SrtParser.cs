@@ -14,7 +14,7 @@ namespace SubtitleSync.Core.SubtitleParsers
     public class SrtParser : SubtitleParserBase
     {
         private static readonly Regex TimingLineRegex = new Regex(
-            @"(\d{2}:\d{2}:\d{2},\d{3})\s+--\>\s+(\d{2}:\d{2}:\d{2},\d{3})",
+            @"(\d{2}:\d{2}:\d{2},\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2},\d{3})",
             RegexOptions.Compiled);
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace SubtitleSync.Core.SubtitleParsers
                 // Parse start and end times
                 if (!TimeSpan.TryParseExact(
                     timingMatch.Groups[1].Value.Replace(",", "."),
-                    new[] { "hh\:mm\:ss\.fff", "hh\:mm\:ss\,fff" },
+                    new[] { "hh:mm:ss.fff", "hh:mm:ss,fff" },
                     CultureInfo.InvariantCulture,
                     out TimeSpan startTime))
                 {
@@ -66,7 +66,7 @@ namespace SubtitleSync.Core.SubtitleParsers
 
                 if (!TimeSpan.TryParseExact(
                     timingMatch.Groups[2].Value.Replace(",", "."),
-                    new[] { "hh\:mm\:ss\.fff", "hh\:mm\:ss\,fff" },
+                    new[] { "hh:mm:ss.fff", "hh:mm:ss,fff" },
                     CultureInfo.InvariantCulture,
                     out TimeSpan endTime))
                 {
@@ -115,7 +115,7 @@ namespace SubtitleSync.Core.SubtitleParsers
             foreach (var entry in entries)
             {
                 builder.AppendLine(index.ToString());
-                builder.AppendLine($"{entry.StartTime:hh\:mm\:ss\,fff} --> {entry.EndTime:hh\:mm\:ss\,fff}");
+                builder.AppendLine($"{entry.StartTime:hh:mm:ss,fff} --> {entry.EndTime:hh:mm:ss,fff}");
                 builder.AppendLine(entry.Text);
                 builder.AppendLine();
                 index++;
