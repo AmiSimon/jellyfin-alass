@@ -5,8 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Jellyfin.Data.Entities;
 using MediaBrowser.Model.Entities;
-using Microsoft.Extensions.Logging;
 using SubtitleSync.Shared.Interfaces;
+
+// Use fully qualified names to avoid conflict with Microsoft.Extensions.Logging
+using JellyfinLogger = Microsoft.Extensions.Logging.ILogger;
+using JellyfinLogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace SubtitleSync.Jellyfin
 {
@@ -15,7 +18,7 @@ namespace SubtitleSync.Jellyfin
     /// </summary>
     public class JellyfinAdapter : IMediaServerAbstraction
     {
-        private readonly ILogger<JellyfinAdapter> _jellyfinLogger;
+        private readonly JellyfinLogger _jellyfinLogger;
         private readonly ILogger _pluginLogger;
 
         /// <summary>
@@ -125,17 +128,17 @@ namespace SubtitleSync.Jellyfin
         {
             switch (level)
             {
-                case LogLevel.Debug:
+                case Shared.Interfaces.LogLevel.Debug:
                     _pluginLogger.Debug(message, args);
                     break;
-                case LogLevel.Info:
+                case Shared.Interfaces.LogLevel.Info:
                     _pluginLogger.Info(message, args);
                     break;
-                case LogLevel.Warning:
+                case Shared.Interfaces.LogLevel.Warning:
                     _pluginLogger.Warn(message, args);
                     break;
-                case LogLevel.Error:
-                case LogLevel.Critical:
+                case Shared.Interfaces.LogLevel.Error:
+                case Shared.Interfaces.LogLevel.Critical:
                     _pluginLogger.Error(message, args);
                     break;
             }
@@ -147,7 +150,7 @@ namespace SubtitleSync.Jellyfin
     /// </summary>
     internal class JellyfinLoggerAdapter : ILogger
     {
-        private readonly Microsoft.Extensions.Logging.ILogger _jellyfinLogger;
+        private readonly JellyfinLogger _jellyfinLogger;
 
         public JellyfinLoggerAdapter()
         {
