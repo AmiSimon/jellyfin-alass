@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using SubtitleSync.Shared.Interfaces;
+using SubtitleSync.Shared.Interfaces;
 
 namespace SubtitleSync.Core.Services
 {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using SubtitleSync.Shared.Interfaces;
 using SubtitleSync.Core.Interfaces;
 using SubtitleSync.Core.Models;
 
